@@ -2,7 +2,8 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- iPhone 13 mini等の小型デバイス向けにズームをより厳格に制限 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
     <title>Smart Bookshelf - Receipt to Shelf</title>
     <!-- Tailwind CSS for UI styling -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -29,9 +30,20 @@
         /* Tab Active State */
         .tab-active { color: #2563eb; border-bottom: 2px solid #2563eb; }
 
-        /* Prevent zoom on focus: Font size must be at least 16px */
-        input[type="text"] {
+        /* Prevent zoom on focus: 
+           iOS zooms if font-size is less than 16px. 
+           We also ensure the input doesn't have a default scale-down effect. */
+        input[type="text"], 
+        input[type="search"], 
+        textarea {
             font-size: 16px !important;
+            /* Ensure no default iOS styling causes slight zoom */
+            -webkit-text-size-adjust: 100%;
+        }
+
+        /* Adjust placeholder size slightly if needed, but the input font-size must stay 16px */
+        input::placeholder {
+            font-size: 14px;
         }
     </style>
 </head>
@@ -72,6 +84,7 @@
 
             <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
                 <div class="flex gap-2">
+                    <!-- Font-size fixed to 16px via CSS to stop iOS zoom -->
                     <input type="text" id="api-search-input" placeholder="タイトルや著者で検索..." class="flex-1 bg-slate-50 border-none rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500">
                     <button onclick="searchBooksApi()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-bold shadow-md shadow-blue-100">検索</button>
                 </div>
@@ -103,6 +116,7 @@
 
                 <!-- Search inside shelf -->
                 <div class="relative">
+                    <!-- Font-size fixed to 16px via CSS -->
                     <input 
                         type="text" 
                         id="shelf-search-input" 
