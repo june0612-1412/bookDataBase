@@ -18,11 +18,19 @@
             animation: spin 1s linear infinite;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .book-card { animation: fadeIn 0.5s ease-out forwards; }
+        .book-card { animation: fadeIn 0.4s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* Custom Scrollbar */
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
+        /* Tab Active State */
+        .tab-active { color: #2563eb; border-bottom: 2px solid #2563eb; }
     </style>
 </head>
-<body class="bg-slate-50 min-h-screen font-sans">
+<body class="bg-slate-50 min-h-screen font-sans text-slate-900">
 
     <!-- Header -->
     <header class="bg-white border-b sticky top-0 z-20 px-4 py-3 shadow-sm">
@@ -33,71 +41,110 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                     </svg>
                 </div>
-                <h1 class="text-lg font-bold text-slate-800">レシート本棚</h1>
+                <h1 class="text-lg font-bold">レシート本棚</h1>
             </div>
-            <div id="shelf-count" class="text-sm font-medium bg-slate-100 text-slate-600 px-3 py-1 rounded-full">0 冊</div>
+            <div id="shelf-count" class="text-xs font-bold bg-blue-50 text-blue-600 px-3 py-1 rounded-full border border-blue-100">0 冊</div>
         </div>
     </header>
 
     <main class="max-w-md mx-auto p-4 pb-24">
         
-        <!-- Upload Section -->
-        <div class="mb-8">
+        <!-- Registration Section -->
+        <div class="mb-6 space-y-3">
             <div 
                 onclick="document.getElementById('receipt-input').click()"
-                class="relative overflow-hidden group bg-white border-2 border-dashed border-slate-300 rounded-2xl p-8 flex flex-col items-center justify-center transition-all hover:border-blue-400 active:scale-95 cursor-pointer"
+                class="bg-white border-2 border-dashed border-slate-300 rounded-2xl p-5 flex flex-col items-center justify-center transition-all hover:border-blue-400 active:scale-95 cursor-pointer shadow-sm"
             >
-                <div class="bg-blue-50 p-4 rounded-full mb-4 group-hover:bg-blue-100 transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div class="bg-blue-50 p-2.5 rounded-full mb-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
                 </div>
-                <p class="text-slate-700 font-bold">レシートをスキャン</p>
-                <p class="text-slate-400 text-xs mt-1 text-center px-4">撮影するとISBNを自動で読み取ります</p>
+                <p class="text-sm font-bold text-slate-700">レシートをスキャン</p>
                 <input type="file" id="receipt-input" class="hidden" accept="image/*" capture="environment">
             </div>
 
-            <!-- Analysis Progress -->
-            <div id="status-card" class="hidden mt-4 bg-blue-600 rounded-xl p-4 text-white shadow-lg shadow-blue-200 transition-all">
+            <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+                <div class="flex gap-2">
+                    <input type="text" id="api-search-input" placeholder="タイトルや著者で検索..." class="flex-1 bg-slate-50 border-none rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500">
+                    <button onclick="searchBooksApi()" class="bg-blue-600 text-white px-3 py-2 rounded-lg text-xs font-bold shadow-md shadow-blue-100">検索</button>
+                </div>
+                <div id="api-search-results" class="hidden mt-3 max-h-48 overflow-y-auto custom-scroll border-t pt-2">
+                    <div id="api-results-list" class="flex flex-col gap-1.5"></div>
+                </div>
+            </div>
+
+            <div id="status-card" class="hidden bg-blue-600 rounded-xl p-4 text-white shadow-lg shadow-blue-200">
                 <div class="flex items-center gap-4">
                     <div class="loader border-blue-200 border-top-blue-600"></div>
                     <div class="flex-1">
-                        <p id="status-text" class="text-sm font-medium">画像を解析中...</p>
-                        <div class="w-full bg-blue-500 rounded-full h-1.5 mt-2">
-                            <div id="status-bar" class="bg-white h-1.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+                        <p id="status-text" class="text-xs font-bold">画像を解析中...</p>
+                        <div class="w-full bg-blue-500 rounded-full h-1 mt-2">
+                            <div id="status-bar" class="bg-white h-1 rounded-full transition-all duration-300" style="width: 0%"></div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Shelf Grid -->
-        <div class="flex justify-between items-center mb-4">
-            <h2 class="font-bold text-slate-800">マイ本棚</h2>
-            <button onclick="clearShelf()" class="text-xs text-slate-400 hover:text-red-500">本棚を空にする</button>
-        </div>
-        
-        <div id="book-shelf" class="grid grid-cols-2 gap-4">
-            <!-- Books will be injected here -->
-        </div>
+        <!-- My Shelf Section -->
+        <div class="bg-white rounded-2xl p-3 border border-slate-200 shadow-sm">
+            <div class="flex flex-col gap-3 mb-4">
+                <div class="flex justify-between items-center">
+                    <h2 class="font-bold text-slate-800 text-sm">マイ本棚</h2>
+                    <button onclick="clearShelf()" class="text-[9px] font-bold text-slate-400 hover:text-red-500 uppercase tracking-widest">全消去</button>
+                </div>
 
-        <!-- Empty State -->
-        <div id="empty-state" class="flex flex-col items-center justify-center py-20 text-slate-300">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mb-2 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-            </svg>
-            <p class="text-sm font-medium">本棚は空です</p>
+                <!-- Search inside shelf -->
+                <div class="relative">
+                    <input 
+                        type="text" 
+                        id="shelf-search-input" 
+                        oninput="updateShelfUI()"
+                        placeholder="本棚内を検索..." 
+                        class="w-full bg-slate-100 border-none rounded-full px-8 py-1.5 text-xs focus:ring-2 focus:ring-blue-500"
+                    >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-slate-400 absolute left-2.5 top-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </div>
+
+                <!-- Filter Tabs -->
+                <div class="flex border-b border-slate-100">
+                    <button onclick="setFilter('all')" id="tab-all" class="flex-1 py-1.5 text-[9px] font-bold transition-all tab-active">すべて</button>
+                    <button onclick="setFilter('unread')" id="tab-unread" class="flex-1 py-1.5 text-[9px] font-bold text-slate-400 transition-all">未読</button>
+                    <button onclick="setFilter('reading')" id="tab-reading" class="flex-1 py-1.5 text-[9px] font-bold text-slate-400 transition-all">途中</button>
+                    <button onclick="setFilter('read')" id="tab-read" class="flex-1 py-1.5 text-[9px] font-bold text-slate-400 transition-all">既読</button>
+                </div>
+            </div>
+            
+            <div id="book-shelf" class="grid grid-cols-3 gap-2.5">
+                <!-- Books injected here -->
+            </div>
+
+            <div id="empty-state" class="hidden flex flex-col items-center justify-center py-10 text-slate-300">
+                <p class="text-[10px] font-bold text-center">該当する本がありません</p>
+            </div>
         </div>
     </main>
 
-    <!-- Success Toast -->
-    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-6 py-3 rounded-full text-sm font-medium shadow-xl opacity-0 transition-all transform translate-y-4 pointer-events-none z-50">
-        完了しました！
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-6 py-2.5 rounded-full text-[10px] font-bold shadow-2xl opacity-0 transition-all transform translate-y-4 pointer-events-none z-50">
+        完了しました
     </div>
 
     <script>
-        let myBooks = JSON.parse(localStorage.getItem('my-bookshelf') || '[]');
+        let myBooks = [];
+        let currentFilter = 'all'; 
+
+        // Initial Load
+        try {
+            const savedData = localStorage.getItem('my-bookshelf');
+            if (savedData) myBooks = JSON.parse(savedData);
+        } catch (e) {
+            console.error(e);
+        }
         
         const receiptInput = document.getElementById('receipt-input');
         const statusCard = document.getElementById('status-card');
@@ -106,125 +153,203 @@
         const bookShelf = document.getElementById('book-shelf');
         const emptyState = document.getElementById('empty-state');
         const shelfCount = document.getElementById('shelf-count');
+        const shelfSearchInput = document.getElementById('shelf-search-input');
+        const apiSearchInput = document.getElementById('api-search-input');
+        const apiSearchResults = document.getElementById('api-search-results');
+        const apiResultsList = document.getElementById('api-results-list');
 
-        // Initialize Shelf
         updateShelfUI();
 
-        // Handle File Selection
+        // Switch Filter Tab
+        function setFilter(filter) {
+            currentFilter = filter;
+            document.querySelectorAll('[id^="tab-"]').forEach(btn => {
+                btn.classList.remove('tab-active');
+                btn.classList.add('text-slate-400');
+            });
+            document.getElementById(`tab-${filter}`).classList.add('tab-active');
+            document.getElementById(`tab-${filter}`).classList.remove('text-slate-400');
+            updateShelfUI();
+        }
+
+        // External API Search
+        async function searchBooksApi() {
+            const query = apiSearchInput.value.trim();
+            if (!query) return;
+
+            showStatus("書籍を検索中...");
+            apiSearchResults.classList.add('hidden');
+            apiResultsList.innerHTML = "";
+
+            try {
+                const response = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=5`);
+                const data = await response.json();
+
+                if (data.items && data.items.length > 0) {
+                    apiSearchResults.classList.remove('hidden');
+                    data.items.forEach(item => {
+                        const info = item.volumeInfo;
+                        const itemEl = document.createElement('div');
+                        itemEl.className = "flex items-center gap-2.5 p-1.5 hover:bg-slate-50 rounded-lg cursor-pointer border border-transparent hover:border-slate-100";
+                        itemEl.onclick = () => selectBook(item);
+                        itemEl.innerHTML = `
+                            <img src="${info.imageLinks?.smallThumbnail || 'https://via.placeholder.com/40x60'}" class="w-7 h-10 object-cover rounded shadow-xs">
+                            <div class="flex-1 overflow-hidden">
+                                <p class="text-[9px] font-bold truncate">${info.title}</p>
+                                <p class="text-[8px] text-slate-400 truncate">${info.authors ? info.authors[0] : '不明'}</p>
+                            </div>
+                            <div class="bg-blue-600 text-white p-1 rounded-full flex-shrink-0"><svg xmlns="http://www.w3.org/2000/svg" class="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4" /></svg></div>
+                        `;
+                        apiResultsList.appendChild(itemEl);
+                    });
+                }
+            } catch (err) {
+                showToast("検索エラー");
+            } finally {
+                hideStatus();
+            }
+        }
+
+        function selectBook(item) {
+            const info = item.volumeInfo;
+            const isbn = info.industryIdentifiers?.find(id => id.type.includes('ISBN'))?.identifier || `id-${Date.now()}`;
+            addBookToData(info, isbn);
+            apiSearchResults.classList.add('hidden');
+            apiSearchInput.value = "";
+        }
+
+        // Receipt Scanner
         receiptInput.addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (!file) return;
 
-            showStatus("画像を解析中...");
-            
+            showStatus("OCR解析を開始...");
             try {
-                // Perform OCR using Tesseract.js
                 const result = await Tesseract.recognize(file, 'eng+jpn', {
                     logger: m => {
                         if (m.status === 'recognizing text') {
-                            const progress = Math.round(m.progress * 100);
-                            statusText.innerText = `解析中: ${progress}%`;
-                            statusBar.style.width = `${progress}%`;
+                            const p = Math.round(m.progress * 100);
+                            statusText.innerText = `読み取り中: ${p}%`;
+                            statusBar.style.width = `${p}%`;
                         }
                     }
                 });
 
-                const fullText = result.data.text;
-                console.log("OCR Extracted Text:", fullText);
-
-                // Regex to find ISBN-13 (Starts with 978 or 979, total 13 digits)
-                // This pattern automatically ignores stationery or other receipt items
-                const isbnMatches = fullText.match(/(97[89][-\s]?\d[-\s]?\d{3}[-\s]?\d{5}[-\s]?\d)|(\d{9}[\dX])/g);
-
-                if (!isbnMatches || isbnMatches.length === 0) {
+                const isbnMatches = result.data.text.match(/(97[89][-\s]?\d[-\s]?\d{3}[-\s]?\d{5}[-\s]?\d)|(\d{9}[\dX])/g);
+                if (!isbnMatches) {
                     showToast("ISBNが見つかりませんでした");
-                    hideStatus();
                     return;
                 }
 
-                // Clean matches and remove duplicates
                 const uniqueIsbns = [...new Set(isbnMatches.map(s => s.replace(/[-\s]/g, "")))];
-                
-                showStatus(`${uniqueIsbns.length}件のISBNを照合中...`);
-                
-                let foundCount = 0;
+                showStatus("書籍情報を取得中...");
                 for (const isbn of uniqueIsbns) {
-                    const success = await fetchAndAddBook(isbn);
-                    if (success) foundCount++;
+                    await fetchAndAddBook(isbn);
                 }
-
-                if (foundCount > 0) {
-                    showToast(`${foundCount}冊の本を追加しました`);
-                } else {
-                    showToast("書籍情報が見つかりませんでした");
-                }
-
+                showToast(`${uniqueIsbns.length}件の処理完了`);
             } catch (error) {
-                console.error("OCR/API Error:", error);
-                showToast("読み取りエラーが発生しました");
+                showToast("解析エラー");
             } finally {
                 hideStatus();
-                receiptInput.value = ""; 
+                receiptInput.value = "";
             }
         });
 
-        // Fetch data from Google Books API
         async function fetchAndAddBook(isbn) {
-            // Skip if already in shelf
-            if (myBooks.some(b => b.isbn === isbn)) return false;
-
+            if (myBooks.some(b => b.isbn === isbn)) return;
             try {
-                const response = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}`);
-                const data = await response.json();
-
-                if (data.items && data.items.length > 0) {
-                    const info = data.items[0].volumeInfo;
-                    const book = {
-                        id: Date.now() + Math.random(),
-                        title: info.title,
-                        authors: info.authors ? info.authors.join(", ") : "不明",
-                        thumbnail: info.imageLinks ? info.imageLinks.thumbnail.replace('http:', 'https:') : "https://via.placeholder.com/150x220?text=No+Cover",
-                        isbn: isbn
-                    };
-                    
-                    myBooks.unshift(book); // Add to beginning
-                    saveShelf();
-                    updateShelfUI();
-                    return true;
+                const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}`);
+                const data = await res.json();
+                if (data.items) {
+                    addBookToData(data.items[0].volumeInfo, isbn);
                 }
-            } catch (err) {
-                console.error(`Error fetching ISBN ${isbn}:`, err);
-            }
-            return false;
+            } catch (e) {}
         }
 
+        function addBookToData(info, isbn) {
+            if (myBooks.some(b => b.isbn === isbn)) return;
+            const book = {
+                id: Date.now() + Math.random(),
+                title: info.title,
+                authors: info.authors ? info.authors.join(", ") : "不明",
+                thumbnail: info.imageLinks ? info.imageLinks.thumbnail.replace('http:', 'https:') : "https://via.placeholder.com/150x220?text=No+Cover",
+                isbn: isbn,
+                status: 'unread', // 'unread', 'reading', 'read'
+                dateAdded: new Date().toISOString()
+            };
+            myBooks.unshift(book);
+            saveShelf();
+            updateShelfUI();
+        }
+
+        // Toggle Status: unread -> reading -> read -> unread
+        function cycleStatus(id) {
+            const book = myBooks.find(b => b.id.toString() === id.toString());
+            if (book) {
+                const statusOrder = ['unread', 'reading', 'read'];
+                const currentIndex = statusOrder.indexOf(book.status || 'unread');
+                const nextIndex = (currentIndex + 1) % statusOrder.length;
+                book.status = statusOrder[nextIndex];
+                
+                const statusLabels = { unread: '未読', reading: '途中', read: '既読' };
+                saveShelf();
+                updateShelfUI();
+                showToast(`「${statusLabels[book.status]}」に変更`);
+            }
+        }
+
+        // Update Shelf UI with Filter and Search
         function updateShelfUI() {
-            bookShelf.innerHTML = "";
+            const searchTerm = shelfSearchInput.value.toLowerCase();
             
-            if (myBooks.length === 0) {
+            let filteredBooks = myBooks.filter(book => {
+                const matchesSearch = book.title.toLowerCase().includes(searchTerm) || 
+                                      book.authors.toLowerCase().includes(searchTerm);
+                const matchesTab = (currentFilter === 'all') || 
+                                   (currentFilter === book.status);
+                return matchesSearch && matchesTab;
+            });
+
+            bookShelf.innerHTML = "";
+            shelfCount.innerText = `${myBooks.length} 冊`;
+
+            if (filteredBooks.length === 0) {
                 emptyState.classList.remove('hidden');
-                shelfCount.innerText = "0 冊";
                 return;
             }
 
             emptyState.classList.add('hidden');
-            shelfCount.innerText = `${myBooks.length} 冊`;
-
-            myBooks.forEach(book => {
+            filteredBooks.forEach(book => {
+                const status = book.status || 'unread';
                 const card = document.createElement('div');
-                card.className = "book-card bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden flex flex-col";
+                
+                // Styling based on status
+                let borderClass = 'border-slate-100';
+                let badge = '';
+                if (status === 'read') {
+                    borderClass = 'border-blue-100 bg-blue-50/10';
+                    badge = `<div class="absolute inset-0 bg-blue-600/10 flex items-center justify-center pointer-events-none">
+                                <div class="bg-blue-600 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full shadow-lg">既読</div>
+                             </div>`;
+                } else if (status === 'reading') {
+                    borderClass = 'border-orange-100 bg-orange-50/10';
+                    badge = `<div class="absolute inset-0 bg-orange-500/10 flex items-center justify-center pointer-events-none">
+                                <div class="bg-orange-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full shadow-lg">途中</div>
+                             </div>`;
+                }
+
+                card.className = `book-card bg-white rounded-lg shadow-xs border ${borderClass} overflow-hidden flex flex-col relative`;
                 card.innerHTML = `
-                    <div class="aspect-[3/4] overflow-hidden bg-slate-100 relative">
-                        <img src="${book.thumbnail}" alt="${book.title}" class="w-full h-full object-cover">
-                        <button onclick="removeBook('${book.id}')" class="absolute top-1 right-1 bg-black/40 text-white p-1 rounded-full backdrop-blur-sm">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
+                    <div class="aspect-[3/4.2] overflow-hidden bg-slate-100 relative group cursor-pointer" onclick="cycleStatus('${book.id}')">
+                        <img src="${book.thumbnail}" class="w-full h-full object-cover transition-transform group-hover:scale-105">
+                        ${badge}
+                        <button onclick="event.stopPropagation(); removeBook('${book.id}')" class="absolute top-0.5 right-0.5 bg-black/30 text-white p-0.5 rounded-full backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
                         </button>
                     </div>
-                    <div class="p-3 flex flex-col flex-1">
-                        <h3 class="text-[11px] font-bold text-slate-800 line-clamp-2 leading-tight mb-1">${book.title}</h3>
-                        <p class="text-[9px] text-slate-500 line-clamp-1 mt-auto">${book.authors}</p>
+                    <div class="p-1.5 flex flex-col flex-1 pointer-events-none">
+                        <h3 class="text-[9px] font-bold text-slate-800 line-clamp-2 leading-tight mb-0.5">${book.title}</h3>
+                        <p class="text-[7px] text-slate-400 line-clamp-1 mt-auto">${book.authors}</p>
                     </div>
                 `;
                 bookShelf.appendChild(card);
@@ -232,13 +357,14 @@
         }
 
         function removeBook(id) {
+            if(!confirm("削除しますか？")) return;
             myBooks = myBooks.filter(b => b.id.toString() !== id.toString());
             saveShelf();
             updateShelfUI();
         }
 
         function clearShelf() {
-            if (confirm("本棚をすべて空にしますか？")) {
+            if (confirm("本棚を空にしますか？")) {
                 myBooks = [];
                 saveShelf();
                 updateShelfUI();
@@ -262,12 +388,12 @@
         function showToast(msg) {
             const toast = document.getElementById('toast');
             toast.innerText = msg;
-            toast.classList.remove('opacity-0', 'translate-y-4');
-            toast.classList.add('opacity-100', 'translate-y-0');
+            toast.classList.replace('opacity-0', 'opacity-100');
+            toast.classList.replace('translate-y-4', 'translate-y-0');
             setTimeout(() => {
-                toast.classList.add('opacity-0', 'translate-y-4');
-                toast.classList.remove('opacity-100', 'translate-y-0');
-            }, 3000);
+                toast.classList.replace('opacity-100', 'opacity-0');
+                toast.classList.replace('translate-y-0', 'translate-y-4');
+            }, 1500);
         }
     </script>
 </body>
